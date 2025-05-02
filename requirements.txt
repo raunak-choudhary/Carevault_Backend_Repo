@@ -1,0 +1,27 @@
+# Core web framework
+Flask
+
+# Supabase client and its dependencies
+supabase
+gotrue
+postgrest
+realtime
+storage3
+httpx  # Required by supabase-py
+
+# Environment variable management
+python-dotenv
+
+# JWT handling (potentially needed for Supabase token verification, keep for now)
+python-jose[cryptography] # Includes crypto libraries often needed
+PyJWT
+
+# Password hashing (if you implement separate password logic, less likely needed if relying fully on Supabase)
+# passlib
+# bcrypt
+
+# Date handling (often useful)
+python-dateutil
+
+# Optional: CORS handling for Flask if needed
+Flask-CORS
