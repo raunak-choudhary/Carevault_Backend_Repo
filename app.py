@@ -6,7 +6,10 @@ from config import API_V1_STR, PROJECT_NAME  # Import config
 from routes.auth import auth_bp
 
 # Import other blueprints as you create them
-# from routes.documents import documents_bp
+from routes.documents import documents_bp
+from routes.medications import medications_bp
+from routes.appointments import appointments_bp
+
 # from routes.chat import chat_bp
 # from routes.appointments import appointments_bp
 # from routes.dashboard import dashboard_bp
@@ -28,9 +31,10 @@ def create_app():
     # Register Blueprints
     app.register_blueprint(auth_bp)
     # Register other blueprints here
-    # app.register_blueprint(documents_bp)
+    app.register_blueprint(documents_bp)
+    app.register_blueprint(medications_bp)
     # app.register_blueprint(chat_bp)
-    # app.register_blueprint(appointments_bp)
+    app.register_blueprint(appointments_bp)
     # app.register_blueprint(dashboard_bp)
 
     @app.route("/api")
