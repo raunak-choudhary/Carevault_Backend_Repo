@@ -1,6 +1,6 @@
 # services/appointment_service.py
 from supabase_client import get_supabase
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, timezone
 
 
 supabase = get_supabase()
@@ -101,3 +101,146 @@ def create_appointment(user_id: str, data: dict):
         print(f"DB Error creating appointment: {str(e)}")
         # Could check for specific DB errors like unique constraints if needed
         return None, ({"error": f"Failed to create appointment: {str(e)}"}, 500)
+
+
+# --- New Service Function: Get Appointment by ID ---
+def get_appointment_by_id(user_id: str, appointment_id: str):
+    """
+    Fetches a single appointment by ID with provider details, ensuring user ownership.
+    Returns: Tuple (combined_data | None, status_code)
+    Status codes: 200 (OK), 404 (Not Found), 403 (Forbidden), 500 (Error)
+    """
+    try:
+        # Fetch appointment details
+        appt_response = (
+            supabase.table("appointments")
+            .select("*")
+            .eq("id", appointment_id)
+            .maybe_single()
+            .execute()
+        )
+
+        if not appt_response.data:
+            return None, 404  # Appointment not found
+
+        appointment = appt_response.data
+
+        # Check ownership
+        if appointment.get("user_id") != user_id:
+            return None, 403  # Forbidden access
+
+        # Fetch associated provider details
+        provider_data = None
+
+        provider_id = appointment.get("provider_id")
+
+        if provider_id:
+            prov_response = (
+                supabase.table("providers")
+                .select("*")
+                .eq("id", provider_id)
+                .maybe_single()
+                .execute()
+            )
+            if prov_response.data:
+                provider_data = prov_response.data
+            else:
+                # Provider associated with appointment not found (data integrity issue?)
+                print(
+                    f"Warning: Provider ID {provider_id} found in appointment {appointment_id} but not in providers table."
+                )
+                # Decide how to handle: return error, return partial data, etc.
+                # For now, we'll proceed but provider details will be missing/null
+
+        # Combine appointment data with provider data (if found)
+        combined_data = appointment
+        combined_data["provider_details"] = (
+            provider_data  # Add provider data under a specific key
+        )
+
+        return combined_data, 200
+
+    except Exception as e:
+        print(f"DB Error fetching appointment {appointment_id}: {str(e)}")
+        return None, 500  # Internal Server Error
+
+
+# --- Service Function: List Appointments with Simplified Filter ---
+def get_appointments(
+    user_id: str, skip: int, limit: int, filter_type: str | None = None
+):
+    """
+    Fetches a list of appointments for a user with simplified filtering.
+    filter_type can be 'upcoming', 'completed', 'cancelled', or 'all'.
+    Returns: Tuple (list_of_combined_data | None, total_count | 0)
+    """
+    try:
+        # Base query
+        query = (
+            supabase.table("appointments")
+            .select("*", count="exact")
+            .eq("user_id", user_id)
+        )
+
+        # Default ordering
+        order_column = "appointment_date"
+        order_desc = True  # Show most recent first by default
+
+        # Apply filters based on filter_type
+        filter_type_lower = filter_type.lower() if filter_type else "all"
+
+        if filter_type_lower == "upcoming":
+            now_utc = datetime.now(timezone.utc)
+            query = query.gte("appointment_date", now_utc.isoformat())
+            # Also commonly filter by status for upcoming, e.g., only 'scheduled'
+            query = query.eq("status", "scheduled")
+            order_desc = False  # Show soonest first
+        elif filter_type_lower == "completed":
+            query = query.eq("status", "completed")
+        elif filter_type_lower == "cancelled":
+            query = query.eq("status", "cancelled")
+        # elif filter_type_lower == 'all':
+        # No additional status/date filters needed
+        # else: # Default to 'all' if filter is invalid
+        # No additional filters
+
+        # Apply ordering and pagination
+        query = query.order(order_column, desc=order_desc).range(skip, skip + limit - 1)
+
+        # Execute query
+        response = query.execute()
+
+        appointments = response.data
+        total = (
+            response.count
+            if hasattr(response, "count") and response.count is not None
+            else len(appointments)
+        )
+
+        # --- Fetch provider details efficiently (same as before) ---
+        combined_results = []
+        provider_ids = {
+            appt.get("provider_id") for appt in appointments if appt.get("provider_id")
+        }
+        provider_map = {}
+        if provider_ids:
+            prov_response = (
+                supabase.table("providers")
+                .select("*")
+                .in_("id", list(provider_ids))
+                .execute()
+            )
+            if prov_response.data:
+                provider_map = {prov["id"]: prov for prov in prov_response.data}
+
+        for appt in appointments:
+            provider_id = appt.get("provider_id")
+            appt["provider_details"] = provider_map.get(provider_id)
+            combined_results.append(appt)
+        # -----------------------------------------------
+
+        return combined_results, total
+
+    except Exception as e:
+        print(f"DB Error listing appointments for user {user_id}: {str(e)}")
+        return None, 0

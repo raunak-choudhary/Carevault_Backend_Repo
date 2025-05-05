@@ -9,8 +9,11 @@ from routes.auth import auth_bp
 from routes.documents import documents_bp
 from routes.medications import medications_bp
 from routes.appointments import appointments_bp
+from routes.chat import chat_bp
+from routes.providers import providers_bp
 
-# from routes.chat import chat_bp
+from routes.chat import chat_bp
+
 # from routes.appointments import appointments_bp
 # from routes.dashboard import dashboard_bp
 
@@ -33,8 +36,9 @@ def create_app():
     # Register other blueprints here
     app.register_blueprint(documents_bp)
     app.register_blueprint(medications_bp)
-    # app.register_blueprint(chat_bp)
+    app.register_blueprint(chat_bp)
     app.register_blueprint(appointments_bp)
+    app.register_blueprint(providers_bp)
     # app.register_blueprint(dashboard_bp)
 
     @app.route("/api")
@@ -58,4 +62,4 @@ if __name__ == "__main__":
     app = create_app()
     # Use Flask's development server
     # host='0.0.0.0' makes it accessible externally, debug=True enables auto-reload
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=1999, debug=True)

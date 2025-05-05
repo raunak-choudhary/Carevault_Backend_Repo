@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, g
 from supabase_client import get_supabase  # Import the initialized client
 from functools import wraps
+from services.auth_service import request_email_verification
 
 # Define the blueprint: 'auth' is the name, __name__ helps Flask find templates/static later if needed
 # url_prefix ensures all routes in this file start with /api/v1/auth
@@ -63,7 +64,7 @@ def token_required(f):
 def login():
     # Manual form data access (same as previous example)
     email = request.form.get(
-        "username"
+        "email"
     )  # Corresponds to OAuth2PasswordRequestForm username
     password = request.form.get("password")
 
@@ -124,6 +125,15 @@ def get_user_profile():
     # The structure of this dictionary matches the UserProfile schema
     # (or rather, the columns in your user_profiles table).
     user_profile = g.current_user_profile
+
+    # Transform the profile data for frontend
+    user_profile["address"] = (
+        f"{user_profile.get("address")} {user_profile.get("city")}, {user_profile.get("state")}, {user_profile.get("zip_code")}"
+    )
+
+    if user_profile.get("email_verified"):
+        user_profile["verified"] = True
+
     return jsonify(user_profile), 200
 
 
@@ -167,3 +177,56 @@ def refresh_token():
         print(f"Token refresh error: {str(e)}")
         # You might want to inspect the error `e` for specifics if available
         return jsonify({"error": "Invalid or expired refresh token"}), 401
+
+
+# --- Route: Resend Verification Email ---
+@auth_bp.route("/verify", methods=["POST"])
+@token_required
+def resend_verification_email():
+    """Triggers Supabase to resend the verification email"""
+    # Get the authenticated user's email from the profile stored by the decorator
+    user_email = g.current_user_profile.get("email")
+
+    if not user_email:
+        # Should not happen if profile fetch works, but good to check
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": True,
+                    "message": "User email not found",
+                    "data": None,
+                }
+            ),
+            400,
+        )
+
+    # Call the service function
+    _, status_code = request_email_verification(user_email)
+
+    if status_code == 200:
+        # Return a generic success message for security
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "error": False,
+                    "message": "If your email is registered, a verification email has been sent.",
+                    "data": None,
+                }
+            ),
+            200,
+        )
+    else:
+        # Handle potential errors from the service call
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": True,
+                    "message": "Failed to request verification email. Please try again later.",
+                    "data": None,
+                }
+            ),
+            500,
+        )
