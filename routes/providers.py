@@ -6,14 +6,14 @@ from routes.auth import token_required  # Assuming listing providers requires lo
 providers_bp = Blueprint("providers", __name__, url_prefix="/api/providers")
 
 
-@providers_bp.route("", methods=["GET"])
+@providers_bp.route("/", methods=["GET"])
 @token_required
 def list_providers():
     """Get a list of providers with filtering and pagination"""
     # Parse query parameters
     try:
         skip = int(request.args.get("skip", 0))
-        limit = int(request.args.get("limit", 30))  # Default limit to 30?
+        limit = int(request.args.get("limit", 10))
     except ValueError:
         return (
             jsonify(

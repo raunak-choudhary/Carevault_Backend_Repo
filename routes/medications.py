@@ -194,6 +194,12 @@ def list_medications():
             500,
         )
 
+    for medication in medications:
+        medication["status"] = "active" if medication["active"] else "inactive"
+        medication["refillDate"] = medication["end_date"]
+        medication["unit"] = medication["dosage_unit"]
+        medication["name"] = medication["medication_name"]
+
     return (
         jsonify(
             {
