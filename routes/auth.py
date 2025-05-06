@@ -110,11 +110,61 @@ def login():
 # Example: Register route skeleton
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    # Get data from request.get_json()
-    # Call Supabase sign_up (similar to services/auth.py)
+
+    data = request.get_json()
+    if not data or "email" not in data or "password" not in data:
+        return jsonify({"error": "Missing email or password in request body"}), 400
+
+    email = data["email"]
+    password = data["password"]
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+    user_role = data.get("user_role", "patient")  # Default to 'user' if not provided
+
+    # Call Supabase auth to create user
+    auth_response = supabase.auth.sign_up({"email": email, "password": password})
+
+    # Store additional user metadata
+    user_id = auth_response.user.id
+
+    profile_data = {
+        "id": user_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "user_role": user_role,
+        "email": email,
+        "email_verified": True,
+        "account_status": "active",
+    }
+
     # Insert into user_profiles table
-    # Return success or error
-    pass  # Replace with actual logic
+    profile_response = supabase.table("user_profiles").insert(profile_data).execute()
+    if profile_response.data:
+
+        profile_data["verified"] = True
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "error": False,
+                    "message": "User registered successfully",
+                    "data": profile_data,
+                }
+            ),
+            200,
+        )
+    else:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": True,
+                    "data": None,
+                    "message": "Failed to register user",
+                }
+            ),
+            500,
+        )
 
 
 @auth_bp.route("/me", methods=["GET"])
@@ -133,6 +183,8 @@ def get_user_profile():
 
     if user_profile.get("email_verified"):
         user_profile["verified"] = True
+
+    user_profile["role"] = user_profile.get("user_role", "patient")
 
     return jsonify(user_profile), 200
 
