@@ -36,6 +36,7 @@ def add_medication_reminder_route():
                 {
                     "error": False,
                     "message": "Medication added successfully.",
+                    "data": created_medication,
                     "success": True,
                 },
             ),

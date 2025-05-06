@@ -255,7 +255,7 @@ def get_all_documents_for_user(user_id):
         )
 
         if not response.data:
-            return {"error": "No documents found"}, 404
+            return {"error": "No documents found"}, 200
 
         documents = response.data
 

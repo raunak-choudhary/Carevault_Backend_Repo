@@ -15,7 +15,7 @@ def create_appointment(user_id: str, data: dict):
     # --- Extract and Validate Input ---
     provider_id = data.get("providerId")
     date_str = data.get("date")  # YYYY-MM-DD
-    time_slot_str = data.get("time_slot")  # HH:mm
+    time_slot_str = data.get("startTime")  # HH:mm
     title = data.get("title")  # Will map to 'reason' field
 
     if not provider_id or not date_str or not time_slot_str or not title:
