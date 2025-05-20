@@ -23,3 +23,5 @@ To explore the UI and user experience, visit the frontend repository:
 - **Aninda Ghosh**  
   Master’s in Computer Science, NYU Tandon  
   [ag7762@nyu.edu](mailto:ag7762@nyu.edu)
+
+-----
